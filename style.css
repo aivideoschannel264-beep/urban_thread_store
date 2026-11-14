@@ -187,8 +187,23 @@ footer .brand{color:var(--white)}
 @media (max-width:900px){
  .burger{display:block;margin-left:auto}
  .hsearch{display:none}
- nav{position:fixed;inset:68px 0 auto 0;background:var(--black);flex-direction:column;gap:0;padding:8px 16px 20px;margin:0;transform:translateY(-130%);transition:transform .35s var(--ease);border-bottom:1px solid var(--char2);z-index:-1}
- nav.open{transform:none}
+ nav{
+  position:fixed;
+  inset:68px 0 auto 0;
+  background:var(--black);
+  flex-direction:column;
+  gap:0;
+  padding:8px 16px 20px;
+  margin:0;
+  transform:translateY(-130%);
+  transition:transform .35s var(--ease);
+  border-bottom:1px solid var(--char2);
+  z-index:51;
+}
+
+nav.open{
+  transform:translateY(0);
+}
  nav a{padding:16px 0;font-size:17px;border-bottom:1px solid var(--char2)}
  .pd,.two,.cinfo{grid-template-columns:1fr}
  .sum{position:static}
