@@ -1,11 +1,11 @@
 /* URBAN THREAD: storefront + admin logic (one file, used by index.html and admin.html) */
 const CONFIG = {
   SUPABASE_URL: 'https://afwikvilbmgmwjcwamzx.supabase.co',
-SUPABASE_ANON_KEY: 'sb_publishable_FIpEBKTrSW_j3XhTvNIHHQ_pdX8U3AV',
-  WHATSAPP: '',            // digits only with country code, e.g. 923001234567
+  SUPABASE_ANON_KEY: 'sb_publishable_FIpEBKTrSW_j3XhTvNIHHQ_pdX8U3AV',
+  WHATSAPP: '',
   CURRENCY: 'Rs',
-  EMAIL: '',               // optional, shown on Contact page if filled
-  ADDRESS: '',             // optional
+  EMAIL: '',
+  ADDRESS: '',
   CATEGORIES: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Hoodies', 'Jackets', 'Traditional Wear'],
   STATUSES: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
   BUCKET: 'product-images'
@@ -20,14 +20,20 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const money = n => `${CONFIG.CURRENCY} ${Number(n || 0).toLocaleString('en-US')}`;
 const LOGO = '<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M11 6v22a13 13 0 0 0 26 0V6" stroke="currentColor" stroke-width="5" stroke-linecap="square"/><path d="M3 41c9-7 15 5 22-1s14 3 20-3" stroke="#b9bdc4" stroke-width="1.6" stroke-dasharray="3 3"/></svg>';
 let toastT;
+
 function toast(msg, bad) {
-  const t = $('#toast'); if (!t) return;
-  t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
-  clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 3200);
+  const t = $('#toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.className = '', 3200);
 }
+
 const shortId = id => String(id).slice(0, 8).toUpperCase();
 const sizesOf = p => (p.sizes ? String(p.sizes).split(',').map(s => s.trim()).filter(Boolean) : ['S', 'M', 'L', 'XL', 'XXL']);
 const imgBox = (p, tag) => `<div class="pimg">${tag ? `<span class="tag">${esc(tag)}</span>` : ''}<span class="ph">${LOGO}</span>${p.image_url ? `<img loading="lazy" src="${esc(p.image_url)}" alt="${esc(p.name)}" onerror="this.remove()">` : ''}</div>`;
+
 document.addEventListener('DOMContentLoaded', () => {
   $$('[data-logo]').forEach(e => e.innerHTML = LOGO);
   if ($('#yr')) $('#yr').textContent = new Date().getFullYear();
@@ -38,11 +44,13 @@ const store = {
   products: [], loaded: false, error: null, order: null,
   cart: (() => { try { return JSON.parse(localStorage.getItem('ut_cart')) || []; } catch { return []; } })()
 };
+
 const saveCart = () => {
   try { localStorage.setItem('ut_cart', JSON.stringify(store.cart)); } catch { }
   const n = store.cart.reduce((a, i) => a + i.qty, 0), c = $('#cartCount');
   if (c) { c.textContent = n; c.hidden = !n; }
 };
+
 const findP = id => store.products.find(p => String(p.id) === String(id));
 const cartLines = () => store.cart.map(i => ({ ...i, p: findP(i.id) })).filter(l => l.p);
 const cartTotal = () => cartLines().reduce((a, l) => a + Number(l.p.price) * l.qty, 0);
@@ -57,6 +65,7 @@ async function loadProducts() {
 const card = (p, tag) => `<a class="card" href="#/product/${encodeURIComponent(p.id)}">${imgBox(p, tag)}<h3>${esc(p.name)}</h3><div class="cc">${esc(p.category || '')}</div><div class="pr">${money(p.price)}</div></a>`;
 const skeleton = n => `<div class="grid">${'<div class="skel"></div>'.repeat(n)}</div>`;
 const emptyBox = (h, t, btn) => `<div class="empty"><h3>${h}</h3><p>${t}</p>${btn || ''}</div>`;
+
 function stateBox() {
   if (store.error === 'setup') return emptyBox('Store not connected yet', 'Add your Supabase URL and anon key at the top of script.js.');
   if (store.error) return emptyBox('Products could not load', esc(store.error) + '. Check your connection and database policies.', '<button class="btn" data-act="reload">Try again</button>');
@@ -109,80 +118,10 @@ const views = {
           <strong>Size</strong><div class="sizes" id="sizes">${sz.map(s => `<button class="sz" data-size="${esc(s)}">${esc(s)}</button>`).join('')}</div>
           <div class="row"><button class="btn" data-act="add" data-id="${esc(p.id)}">Add to cart</button><button class="btn ghost" data-act="buy" data-id="${esc(p.id)}">Buy now</button></div>
           <p class="note">Cash on Delivery available. Pay when your order arrives.</p></div></div></div></div>`;
-  },
-
-  cart() {
-    const L = cartLines();
-    if (!L.length) return `<div class="page"><div class="wrap"><h1>Your cart</h1>${emptyBox('Your cart is empty', 'Pick something you like and it will show up here.', '<a class="btn" href="#/shop">Start shopping</a>')}</div></div>`;
-    return `<div class="page"><div class="wrap"><h1>Your cart</h1><div class="two"><div>
-      ${L.map(l => `<div class="line">${imgBox(l.p)}<div><h3>${esc(l.p.name)}</h3><small>Size ${esc(l.size)} · ${money(l.p.price)}</small><div class="qty"><button data-act="dec" data-id="${esc(l.id)}" data-size="${esc(l.size)}" aria-label="Decrease">−</button><span>${l.qty}</span><button data-act="inc" data-id="${esc(l.id)}" data-size="${esc(l.size)}" aria-label="Increase">+</button></div></div>
-        <div class="lt"><strong>${money(l.p.price * l.qty)}</strong><button class="rm" data-act="rm" data-id="${esc(l.id)}" data-size="${esc(l.size)}">Remove</button></div></div>`).join('')}</div>
-      <aside class="sum"><h2>Order summary</h2><div class="r"><span>Subtotal</span><span>${money(cartTotal())}</span></div><div class="r"><span>Delivery</span><span>Confirmed on call</span></div><div class="r t"><span>Total</span><span>${money(cartTotal())}</span></div><a class="btn" href="#/checkout">Checkout</a></aside></div></div></div>`;
-  },
-
-  checkout() {
-    const L = cartLines();
-    if (store.order) return `<div class="page"><div class="wrap"><div class="ok"><h1>Order placed</h1><p>Thank you. Your order number is <b>${esc(store.order)}</b>. We will call you to confirm delivery. Pay cash when it arrives.</p><a class="btn light" href="#/shop">Continue shopping</a></div></div></div>`;
-    if (!L.length) return views.cart();
-    return `<div class="page"><div class="wrap"><h1>Checkout</h1><div class="two">
-      <form class="f" id="coForm" novalidate>
-        <label for="cn">Full name</label><input class="field" id="cn" name="name" autocomplete="name" required minlength="2">
-        <label for="cp">Phone number</label><input class="field" id="cp" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="03XX XXXXXXX" required>
-        <label for="ca">Delivery address</label><textarea class="field" id="ca" name="address" rows="3" autocomplete="street-address" placeholder="House, street, area, city" required></textarea>
-        <label>Payment</label><div class="pay">Cash on Delivery</div>
-        <div class="err" id="coErr" role="alert"></div>
-        <button class="btn" style="width:100%;margin-top:20px" type="submit" id="coBtn">Place order · ${money(cartTotal())}</button></form>
-      <aside class="sum"><h2>Order summary</h2>${L.map(l => `<div class="r"><span>${esc(l.p.name)} (${esc(l.size)}) × ${l.qty}</span><span>${money(l.p.price * l.qty)}</span></div>`).join('')}<div class="r t"><span>Total</span><span>${money(cartTotal())}</span></div></aside></div></div></div>`;
-  },
-
-  about() {
-    return `<div class="page"><div class="wrap"><h1>About URBAN THREAD</h1><div class="prose">
-      <p>URBAN THREAD is a men's fashion label built on one idea: everyday clothing should look sharp and feel solid. We design clean, modern pieces with a streetwear attitude and the finish of premium tailoring.</p>
-      <p>Every order is confirmed by phone and delivered to your door. You pay in cash when it arrives, so you only pay for what you are happy with.</p></div>
-      <div class="vals"><div><h3>Considered cuts</h3><p>Fits made for real wear, from the office to the street.</p></div><div><h3>Honest quality</h3><p>Fabric and stitching chosen to last past one season.</p></div><div><h3>Simple ordering</h3><p>No account needed. Add to cart, enter your address, done.</p></div></div></div></div>`;
-  },
-
-  contact() {
-    const wa = CONFIG.WHATSAPP;
-    return `<div class="page"><div class="wrap"><h1>Contact</h1><div class="cinfo"><div>
-      ${wa ? `<div class="box"><h3>WhatsApp</h3><p>Fastest way to reach us for sizes, orders and delivery.</p><a class="btn" style="margin-top:12px" target="_blank" rel="noopener" href="https://wa.me/${wa}">Chat on WhatsApp</a></div>` : ''}
-      ${CONFIG.EMAIL ? `<div class="box"><h3>Email</h3><a href="mailto:${esc(CONFIG.EMAIL)}">${esc(CONFIG.EMAIL)}</a></div>` : ''}
-      ${CONFIG.ADDRESS ? `<div class="box"><h3>Address</h3><p>${esc(CONFIG.ADDRESS)}</p></div>` : ''}</div>
-      <form class="f" id="msgForm"><label for="mn">Your name</label><input class="field" id="mn" required><label for="mm">Message</label><textarea class="field" id="mm" rows="5" required></textarea>
-      <button class="btn" style="margin-top:18px" type="submit">Send via WhatsApp</button><p class="note">This opens WhatsApp with your message ready to send.</p></form></div></div></div>`;
-  }
-};
-
-function renderGrid() {
-  const g = $('#shopGrid'); if (!g) return;
-  if (!store.loaded) { g.innerHTML = skeleton(8); return; }
-  if (store.error) { g.innerHTML = stateBox(); return; }
-  const q = new URLSearchParams((location.hash.split('?')[1] || ''));
-  const cat = q.get('cat') || '', term = ($('#shopQ')?.value || '').trim().toLowerCase(), sort = $('#shopSort')?.value;
-  let list = store.products.filter(p => (!cat || (cat === 'new' ? p.is_new : p.category === cat)) && (!term || `${p.name} ${p.category || ''}`.toLowerCase().includes(term)));
-  if (sort) list.sort((a, b) => sort === 'lo' ? a.price - b.price : b.price - a.price);
-  g.innerHTML = list.length ? `<div class="grid">${list.map(p => card(p, p.is_new ? 'New' : '')).join('')}</div>` : emptyBox('No products found', 'Try another category or search term.', '<a class="btn" href="#/shop">Clear filters</a>');
-}
-
-function route() {
-  if (document.body.dataset.page !== 'store') return;
-  const [path, qs] = (location.hash.slice(1) || '/').split('?');
-  const seg = path.split('/').filter(Boolean), q = new URLSearchParams(qs || '');
-  const name = seg[0] || 'home';
-  if (name !== 'checkout') store.order = null;
-  const html = name === 'shop' ? views.shop(q) : name === 'product' ? views.product(decodeURIComponent(seg[1] || '')) : views[name] ? views[name]() : views.home();
-  const app = $('#app'); app.innerHTML = html;
-  $$('#nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#/' + (name === 'home' ? '' : name) || (name === 'shop' && q.get('cat') === 'new' && a.href.includes('cat=new'))));
-  $('#nav').classList.remove('open'); $('#burger').setAttribute('aria-expanded', 'false');
-  if (name === 'shop') renderGrid();
-  window.scrollTo(0, 0);
-}
-
-function addToCart(id, size) {
-  const ex = store.cart.find(i => String(i.id) === String(id) && i.size === size);
-  ex ? ex.qty = Math.min(20, ex.qty + 1) : store.cart.push({ id, size, qty: 1 });
+  },  ex ? ex.qty = Math.min(20, ex.qty + 1) : store.cart.push({ id, size, qty: 1 });
   saveCart();
 }
+
 const selSize = () => $('#sizes .on')?.dataset.size;
 
 async function placeOrder(e) {
@@ -190,147 +129,522 @@ async function placeOrder(e) {
   const f = e.target, err = $('#coErr'), btn = $('#coBtn');
   const name = f.name.value.trim(), phone = f.phone.value.trim(), address = f.address.value.trim();
   err.textContent = '';
+
   if (name.length < 2) return err.textContent = 'Enter your full name.';
   if (!/^[+\d][\d\s\-]{6,18}$/.test(phone)) return err.textContent = 'Enter a valid phone number.';
   if (address.length < 8) return err.textContent = 'Enter your full delivery address.';
   if (!sb) return err.textContent = 'Store is not connected to the database yet.';
-  btn.disabled = true; btn.textContent = 'Placing order…';
+
+  btn.disabled = true;
+  btn.textContent = 'Placing order…';
+
   const items = cartLines().map(l => ({ product_id: l.id, size: l.size, qty: l.qty }));
-  const { data, error } = await sb.rpc('place_order', { p_name: name, p_phone: phone, p_address: address, p_items: items });
-  if (error) { btn.disabled = false; btn.textContent = 'Place order'; err.textContent = 'Order failed: ' + error.message + '. Please try again or contact us on WhatsApp.'; return; }
-  store.order = shortId(data); store.cart = []; saveCart(); route();
+  const { data, error } = await sb.rpc('place_order', {
+    p_name: name,
+    p_phone: phone,
+    p_address: address,
+    p_items: items
+  });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Place order';
+    err.textContent = 'Order failed: ' + error.message + '. Please try again or contact us on WhatsApp.';
+    return;
+  }
+
+  store.order = shortId(data);
+  store.cart = [];
+  saveCart();
+  route();
 }
 
 function initStore() {
   saveCart();
   const wa = CONFIG.WHATSAPP;
-  if (wa) { const w = $('#waFloat'); w.href = `https://wa.me/${wa}?text=${encodeURIComponent('Hello URBAN THREAD, I have a question.')}`; w.hidden = false; $('#fWa').href = `https://wa.me/${wa}`; }
-  else $('#fWa').remove();
-  $('#burger').onclick = () => { const o = $('#nav').classList.toggle('open'); $('#burger').setAttribute('aria-expanded', o); };
-  $('#hsearch').onsubmit = e => { e.preventDefault(); location.hash = '#/shop?q=' + encodeURIComponent(e.target.q.value.trim()); e.target.reset(); };
+
+  if (wa) {
+    const w = $('#waFloat');
+    w.href = `https://wa.me/${wa}?text=${encodeURIComponent('Hello URBAN THREAD, I have a question.')}`;
+    w.hidden = false;
+    $('#fWa').href = `https://wa.me/${wa}`;
+  } else $('#fWa').remove();
+
+  $('#burger').onclick = () => {
+    const o = $('#nav').classList.toggle('open');
+    $('#burger').setAttribute('aria-expanded', o);
+  };
+
+  $('#hsearch').onsubmit = e => {
+    e.preventDefault();
+    location.hash = '#/shop?q=' + encodeURIComponent(e.target.q.value.trim());
+    e.target.reset();
+  };
+
   addEventListener('hashchange', route);
-  document.addEventListener('input', e => { if (e.target.id === 'shopQ') renderGrid(); });
-  document.addEventListener('change', e => { if (e.target.id === 'shopSort') renderGrid(); });
+  document.addEventListener('input', e => {
+    if (e.target.id === 'shopQ') renderGrid();
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id === 'shopSort') renderGrid();
+  });
+
   document.addEventListener('submit', e => {
     if (e.target.id === 'coForm') placeOrder(e);
-    if (e.target.id === 'msgForm') { e.preventDefault(); if (!wa) return toast('WhatsApp number is not set up yet.', true); window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Hi, I'm ${$('#mn').value.trim()}. ${$('#mm').value.trim()}`)}`, '_blank', 'noopener'); }
-  });
-  document.addEventListener('click', e => {
-    const s = e.target.closest('.sz'); if (s) { $$('.sz').forEach(b => b.classList.remove('on')); s.classList.add('on'); return; }
-    const b = e.target.closest('[data-act]'); if (!b) return;
-    const { act, id, size } = b.dataset, line = () => store.cart.find(i => String(i.id) === id && i.size === size);
-    if (act === 'reload') { store.loaded = false; route(); loadProducts().then(route); }
-    if (act === 'add' || act === 'buy') { const sz = selSize(); if (!sz) return toast('Please select a size.', true); addToCart(id, sz); act === 'buy' ? location.hash = '#/checkout' : toast('Added to cart'); }
-    if (act === 'inc') { const l = line(); if (l) l.qty = Math.min(20, l.qty + 1); saveCart(); route(); }
-    if (act === 'dec') { const l = line(); if (l) l.qty = Math.max(1, l.qty - 1); saveCart(); route(); }
-    if (act === 'rm') { store.cart = store.cart.filter(i => !(String(i.id) === id && i.size === size)); saveCart(); route(); }
-  });
-  route();
-  loadProducts().then(() => { saveCart(); route(); });
-}
 
-/* ================================ ADMIN ================================= */
+    if (e.target.id === 'msgForm') {
+      e.preventDefault();
+      if (!wa) return toast('WhatsApp number is not set up yet.', true);
+
+      window.open(
+        `https://wa.me/${wa}?text=${encodeURIComponent(`Hi, I'm ${$('#mn').value.trim()}. ${$('#mm').value.trim()}`)}`,
+        '_blank',
+        'noopener'
+      );
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const s = e.target.closest('.sz');
+    if (s) {
+      $$('.sz').forEach(b => b.classList.remove('on'));
+      s.classList.add('on');
+      return;
+    }
+
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+
+    const { act, id, size } = b.dataset;
+    const line = () => store.cart.find(i => String(i.id) === id && i.size === size);
+
+    if (act === 'reload') {
+      store.loaded = false;
+      route();
+      loadProducts().then(route);
+    }
+
+    if (act === 'add' || act === 'buy') {
+      const sz = selSize();
+      if (!sz) return toast('Please select a size.', true);
+      addToCart(id, sz);
+      act === 'buy' ? location.hash = '#/checkout' : toast('Added to cart');
+    }
+
+    if (act === 'inc') {
+      const l = line();
+      if (l) l.qty = Math.min(20, l.qty + 1);
+      saveCart();
+      route();
+    }
+
+    if (act === 'dec') {
+      const l = line();
+      if (l) l.qty = Math.max(1, l.qty - 1);
+      saveCart();
+      route();
+    }
+
+    if (act === 'rm') {
+      store.cart = store.cart.filter(i => !(String(i.id) === id && i.size === size));
+      saveCart();
+      route();
+    }
+  });
+
+  route();
+  loadProducts().then(() => {
+    saveCart();
+    route();
+  });
+        /* ================================ ADMIN ================================= */
 const adm = { products: [], orders: [], tab: 'products', edit: null };
 const A = () => $('#adminApp');
-const fmtDate = d => d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+
+const fmtDate = d => d ? new Date(d).toLocaleString('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short'
+}) : '';
 
 async function initAdmin() {
-  if (!sb) { A().innerHTML = '<div class="login"><h1>Not connected</h1><p>Add your Supabase URL and anon key at the top of script.js.</p></div>'; return; }
+  if (!sb) {
+    A().innerHTML = '<div class="login"><h1>Not connected</h1><p>Add your Supabase URL and anon key at the top of script.js.</p></div>';
+    return;
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   session ? await adminHome() : loginView();
 }
+
 function loginView(msg = '') {
-  A().innerHTML = `<form class="login f" id="loginForm"><h1>Admin login</h1><p class="note">URBAN THREAD store management</p>
-    <label for="le">Email</label><input class="field" id="le" type="email" autocomplete="username" required>
-    <label for="lp">Password</label><input class="field" id="lp" type="password" autocomplete="current-password" required>
-    <div class="err" id="le_err" role="alert">${esc(msg)}</div><button class="btn" style="width:100%;margin-top:18px" id="lb">Sign in</button></form>`;
+  A().innerHTML = `<form class="login f" id="loginForm">
+    <h1>Admin login</h1>
+    <p class="note">URBAN THREAD store management</p>
+
+    <label for="le">Email</label>
+    <input class="field" id="le" type="email" autocomplete="username" required>
+
+    <label for="lp">Password</label>
+    <input class="field" id="lp" type="password" autocomplete="current-password" required>
+
+    <div class="err" id="le_err" role="alert">${esc(msg)}</div>
+    <button class="btn" style="width:100%;margin-top:18px" id="lb">Sign in</button>
+  </form>`;
+
   $('#loginForm').onsubmit = async e => {
-    e.preventDefault(); const b = $('#lb'); b.disabled = true; b.textContent = 'Signing in…';
-    const { error } = await sb.auth.signInWithPassword({ email: $('#le').value.trim(), password: $('#lp').value });
-    if (error) { loginView('Sign in failed: ' + error.message); return; }
+    e.preventDefault();
+
+    const b = $('#lb');
+    b.disabled = true;
+    b.textContent = 'Signing in…';
+
+    const { error } = await sb.auth.signInWithPassword({
+      email: $('#le').value.trim(),
+      password: $('#lp').value
+    });
+
+    if (error) {
+      loginView('Sign in failed: ' + error.message);
+      return;
+    }
+
     adminHome();
   };
 }
+
 async function adminHome() {
-  const { data: ok, error } = await sb.rpc('is_admin');
-  if (error || !ok) { await sb.auth.signOut(); loginView('This account is not an authorised admin.'); return; }
-  A().innerHTML = `<div class="wrap"><div class="shead"><h1 style="font-size:32px">Dashboard</h1><button class="btn ghost sm" id="out">Sign out</button></div>
-    <div class="tabs"><button class="chip" data-tab="products">Products</button><button class="chip" data-tab="orders">Orders</button></div><div id="tabBody"></div></div>`;
-  $('#out').onclick = async () => { await sb.auth.signOut(); loginView(); };
-  $$('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  // Check the currently signed-in user's UID against public.admins.
+  const { data: { user }, error: userError } = await sb.auth.getUser();
+
+  if (userError || !user) {
+    loginView('Could not verify your login. Please sign in again.');
+    return;
+  }
+
+  const { data: adminRow, error: adminError } = await sb
+    .from('admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (adminError) {
+    loginView('Admin permission check failed: ' + adminError.message);
+    return;
+  }
+
+  if (!adminRow) {
+    loginView('This login is not an admin. Signed-in UID: ' + user.id);
+    return;
+  }
+
+  A().innerHTML = `<div class="wrap">
+    <div class="shead">
+      <h1 style="font-size:32px">Dashboard</h1>
+      <button class="btn ghost sm" id="out">Sign out</button>
+    </div>
+
+    <div class="tabs">
+      <button class="chip" data-tab="products">Products</button>
+      <button class="chip" data-tab="orders">Orders</button>
+    </div>
+
+    <div id="tabBody"></div>
+  </div>`;
+
+  $('#out').onclick = async () => {
+    await sb.auth.signOut();
+    loginView();
+  };
+
+  $$('[data-tab]').forEach(b => {
+    b.onclick = () => showTab(b.dataset.tab);
+  });
+
   showTab(adm.tab);
 }
+
 async function showTab(t) {
-  adm.tab = t; $$('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  adm.tab = t;
+
+  $$('[data-tab]').forEach(b => {
+    b.classList.toggle('on', b.dataset.tab === t);
+  });
+
   $('#tabBody').innerHTML = '<p>Loading…</p>';
+
   t === 'products' ? await productsTab() : await ordersTab();
 }
 
 async function productsTab() {
-  const { data, error } = await sb.from('products').select('*').order('created_at', { ascending: false });
-  if (error) { $('#tabBody').innerHTML = `<div class="err">${esc(error.message)}</div>`; return; }
-  adm.products = data || []; const p = adm.edit ? adm.products.find(x => String(x.id) === String(adm.edit)) || {} : {};
-  $('#tabBody').innerHTML = `<div class="panel"><h2>${adm.edit ? 'Edit product' : 'Add new product'}</h2>
-    <form class="f" id="pForm"><div class="fg">
-      <div><label>Name</label><input class="field" name="name" required value="${esc(p.name)}"></div>
-      <div><label>Price (${CONFIG.CURRENCY})</label><input class="field" name="price" type="number" min="0" step="1" required value="${esc(p.price)}"></div>
-      <div><label>Category</label><select class="field" name="category">${[...new Set([...CONFIG.CATEGORIES, p.category].filter(Boolean))].map(c => `<option ${c === p.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
-      <div><label>Sizes (comma separated)</label><input class="field" name="sizes" placeholder="S,M,L,XL,XXL" value="${esc(p.sizes || 'S,M,L,XL,XXL')}"></div>
-      <div class="full"><label>Description</label><textarea class="field" name="description" rows="3">${esc(p.description)}</textarea></div>
-      <div class="full"><label>Product image</label><input class="field" name="image" type="file" accept="image/jpeg,image/png,image/webp">${p.image_url ? `<img class="prev" src="${esc(p.image_url)}" alt="">` : ''}</div></div>
-      <div class="chk"><label><input type="checkbox" name="is_new" ${p.is_new ? 'checked' : ''}> New arrival</label><label><input type="checkbox" name="is_best_seller" ${p.is_best_seller ? 'checked' : ''}> Best seller</label></div>
+  const { data, error } = await sb
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    $('#tabBody').innerHTML = `<div class="err">${esc(error.message)}</div>`;
+    return;
+  }
+
+  adm.products = data || [];
+
+  const p = adm.edit
+    ? adm.products.find(x => String(x.id) === String(adm.edit)) || {}
+    : {};
+
+  $('#tabBody').innerHTML = `<div class="panel">
+    <h2>${adm.edit ? 'Edit product' : 'Add new product'}</h2>
+
+    <form class="f" id="pForm">
+      <div class="fg">
+
+        <div>
+          <label>Name</label>
+          <input class="field" name="name" required value="${esc(p.name)}">
+        </div>
+
+        <div>
+          <label>Price (${CONFIG.CURRENCY})</label>
+          <input class="field" name="price" type="number" min="0" step="1" required value="${esc(p.price)}">
+        </div>
+
+        <div>
+          <label>Category</label>
+          <select class="field" name="category">
+            ${[...new Set([...CONFIG.CATEGORIES, p.category].filter(Boolean))]
+              .map(c => `<option ${c === p.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label>Sizes (comma separated)</label>
+          <input class="field" name="sizes" placeholder="S,M,L,XL,XXL" value="${esc(p.sizes || 'S,M,L,XL,XXL')}">
+        </div>
+
+        <div class="full">
+          <label>Description</label>
+          <textarea class="field" name="description" rows="3">${esc(p.description)}</textarea>
+        </div>
+
+        <div class="full">
+          <label>Product image</label>
+          <input class="field" name="image" type="file" accept="image/jpeg,image/png,image/webp">
+          ${p.image_url ? `<img class="prev" src="${esc(p.image_url)}" alt="">` : ''}
+        </div>
+
+      </div>
+
+      <div class="chk">
+        <label><input type="checkbox" name="is_new" ${p.is_new ? 'checked' : ''}> New arrival</label>
+        <label><input type="checkbox" name="is_best_seller" ${p.is_best_seller ? 'checked' : ''}> Best seller</label>
+      </div>
+
       <div class="err" id="pErr" role="alert"></div>
-      <div class="acts"><button class="btn" id="pBtn">${adm.edit ? 'Save changes' : 'Add product'}</button>${adm.edit ? '<button type="button" class="btn ghost" id="pCancel">Cancel</button>' : ''}</div></form></div>
-    <div class="panel"><h2>Products (${adm.products.length})</h2>${adm.products.length ? adm.products.map(x => `<div class="arow">${imgBox(x)}<div><strong>${esc(x.name)}</strong><br><small>${esc(x.category || '')} · ${money(x.price)}</small></div><div class="acts"><button class="btn sm ghost" data-edit="${esc(x.id)}">Edit</button><button class="btn sm danger" data-del="${esc(x.id)}">Delete</button></div></div>`).join('') : '<p>No products yet. Add your first one above.</p>'}</div>`;
+
+      <div class="acts">
+        <button class="btn" id="pBtn">${adm.edit ? 'Save changes' : 'Add product'}</button>
+        ${adm.edit ? '<button type="button" class="btn ghost" id="pCancel">Cancel</button>' : ''}
+      </div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Products (${adm.products.length})</h2>
+
+    ${adm.products.length
+      ? adm.products.map(x => `<div class="arow">
+          ${imgBox(x)}
+          <div>
+            <strong>${esc(x.name)}</strong><br>
+            <small>${esc(x.category || '')} · ${money(x.price)}</small>
+          </div>
+          <div class="acts">
+            <button class="btn sm ghost" data-edit="${esc(x.id)}">Edit</button>
+            <button class="btn sm danger" data-del="${esc(x.id)}">Delete</button>
+          </div>
+        </div>`).join('')
+      : '<p>No products yet. Add your first one above.</p>'}
+  </div>`;
+
   $('#pForm').onsubmit = saveProduct;
-  if ($('#pCancel')) $('#pCancel').onclick = () => { adm.edit = null; productsTab(); };
-  $$('[data-edit]').forEach(b => b.onclick = () => { adm.edit = b.dataset.edit; productsTab().then(() => scrollTo(0, 0)); });
-  $$('[data-del]').forEach(b => b.onclick = async () => {
-    if (!confirm('Delete this product permanently?')) return;
-    const { error } = await sb.from('products').delete().eq('id', b.dataset.del);
-    error ? toast('Delete failed: ' + error.message, true) : (toast('Product deleted'), productsTab());
+
+  if ($('#pCancel')) {
+    $('#pCancel').onclick = () => {
+      adm.edit = null;
+      productsTab();
+    };
+  }
+
+  $$('[data-edit]').forEach(b => {
+    b.onclick = () => {
+      adm.edit = b.dataset.edit;
+      productsTab().then(() => scrollTo(0, 0));
+    };
+  });
+
+  $$('[data-del]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Delete this product permanently?')) return;
+
+      const { error } = await sb
+        .from('products')
+        .delete()
+        .eq('id', b.dataset.del);
+
+      error
+        ? toast('Delete failed: ' + error.message, true)
+        : (toast('Product deleted'), productsTab());
+    };
   });
 }
+
 async function saveProduct(e) {
-  e.preventDefault(); const f = e.target, err = $('#pErr'), btn = $('#pBtn'); err.textContent = '';
-  const old = adm.edit ? adm.products.find(x => String(x.id) === String(adm.edit)) : null;
-  const row = { name: f.name.value.trim(), price: Number(f.price.value), category: f.category.value, sizes: f.sizes.value.trim() || null, description: f.description.value.trim() || null, is_new: f.is_new.checked, is_best_seller: f.is_best_seller.checked, image_url: old?.image_url || null };
-  if (!row.name || !(row.price >= 0)) return err.textContent = 'Enter a name and a valid price.';
-  btn.disabled = true; btn.textContent = 'Saving…';
+  e.preventDefault();
+
+  const f = e.target;
+  const err = $('#pErr');
+  const btn = $('#pBtn');
+
+  err.textContent = '';
+
+  const old = adm.edit
+    ? adm.products.find(x => String(x.id) === String(adm.edit))
+    : null;
+
+  const row = {
+    name: f.name.value.trim(),
+    price: Number(f.price.value),
+    category: f.category.value,
+    sizes: f.sizes.value.trim() || null,
+    description: f.description.value.trim() || null,
+    is_new: f.is_new.checked,
+    is_best_seller: f.is_best_seller.checked,
+    image_url: old?.image_url || null
+  };
+
+  if (!row.name || !(row.price >= 0)) {
+    return err.textContent = 'Enter a name and a valid price.';
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
   const file = f.image.files[0];
+
   if (file) {
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 5 * 1024 * 1024) { btn.disabled = false; btn.textContent = 'Save'; return err.textContent = 'Use a JPG, PNG or WebP image under 5 MB.'; }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 5 * 1024 * 1024) {
+      btn.disabled = false;
+      btn.textContent = 'Save';
+      return err.textContent = 'Use a JPG, PNG or WebP image under 5 MB.';
+    }
+
     const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]+/gi, '-').toLowerCase()}`;
-    const up = await sb.storage.from(CONFIG.BUCKET).upload(path, file, { contentType: file.type });
-    if (up.error) { btn.disabled = false; btn.textContent = 'Save'; return err.textContent = 'Image upload failed: ' + up.error.message; }
+
+    const up = await sb.storage
+      .from(CONFIG.BUCKET)
+      .upload(path, file, { contentType: file.type });
+
+    if (up.error) {
+      btn.disabled = false;
+      btn.textContent = 'Save';
+      return err.textContent = 'Image upload failed: ' + up.error.message;
+    }
+
     row.image_url = sb.storage.from(CONFIG.BUCKET).getPublicUrl(path).data.publicUrl;
   }
-  const { error } = adm.edit ? await sb.from('products').update(row).eq('id', adm.edit) : await sb.from('products').insert(row);
-  if (error) { btn.disabled = false; btn.textContent = 'Save'; return err.textContent = error.message; }
-  toast(adm.edit ? 'Product updated' : 'Product added'); adm.edit = null; productsTab();
+
+  const { error } = adm.edit
+    ? await sb.from('products').update(row).eq('id', adm.edit)
+    : await sb.from('products').insert(row);
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    return err.textContent = error.message;
+  }
+
+  toast(adm.edit ? 'Product updated' : 'Product added');
+  adm.edit = null;
+  productsTab();
 }
 
 async function ordersTab() {
-  const { data: orders, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
-  if (error) { $('#tabBody').innerHTML = `<div class="err">${esc(error.message)}</div>`; return; }
-  adm.orders = orders || []; let items = [];
-  if (adm.orders.length) { const r = await sb.from('order_items').select('*').in('order_id', adm.orders.map(o => o.id)); items = r.data || []; }
-  $('#tabBody').innerHTML = adm.orders.length ? adm.orders.map(o => {
-    const its = items.filter(i => String(i.order_id) === String(o.id));
-    return `<div class="order"><header><div><strong>Order ${shortId(o.id)}</strong><br><small>${fmtDate(o.created_at)}</small></div><span class="badge ${esc(o.status)}">${esc(o.status || 'Pending')}</span></header>
-      <p><strong>${esc(o.customer_name)}</strong> · <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a><br>${esc(o.address)}</p>
-      <ul>${its.map(i => `<li>${esc(i.product_name)} (${esc(i.size)}) × ${i.quantity} · ${money(i.price * i.quantity)}</li>`).join('')}</ul>
-      <p><strong>Total ${money(o.total)}</strong> · ${esc(o.payment_method || 'Cash on Delivery')}</p>
-      <label style="font-size:13px;font-weight:600">Status </label><select class="st" data-oid="${esc(o.id)}">${CONFIG.STATUSES.map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>`;
-  }).join('') : '<div class="empty"><h3>No orders yet</h3><p>New customer orders will appear here.</p></div>';
-  $$('.st').forEach(s => s.onchange = async () => {
-    const { error } = await sb.from('orders').update({ status: s.value }).eq('id', s.dataset.oid);
-    error ? toast('Update failed: ' + error.message, true) : (toast('Status updated'), ordersTab());
+  const { data: orders, error } = await sb
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    $('#tabBody').innerHTML = `<div class="err">${esc(error.message)}</div>`;
+    return;
+  }
+
+  adm.orders = orders || [];
+  let items = [];
+
+  if (adm.orders.length) {
+    const r = await sb
+      .from('order_items')
+      .select('*')
+      .in('order_id', adm.orders.map(o => o.id));
+
+    items = r.data || [];
+  }
+
+  $('#tabBody').innerHTML = adm.orders.length
+    ? adm.orders.map(o => {
+        const its = items.filter(i => String(i.order_id) === String(o.id));
+
+        return `<div class="order">
+          <header>
+            <div>
+              <strong>Order ${shortId(o.id)}</strong><br>
+              <small>${fmtDate(o.created_at)}</small>
+            </div>
+            <span class="badge ${esc(o.status)}">${esc(o.status || 'Pending')}</span>
+          </header>
+
+          <p>
+            <strong>${esc(o.customer_name)}</strong> ·
+            <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a><br>
+            ${esc(o.address)}
+          </p>
+
+          <ul>
+            ${its.map(i => `<li>${esc(i.product_name)} (${esc(i.size)}) × ${i.quantity} · ${money(i.price * i.quantity)}</li>`).join('')}
+          </ul>
+
+          <p>
+            <strong>Total ${money(o.total)}</strong> ·
+            ${esc(o.payment_method || 'Cash on Delivery')}
+          </p>
+
+          <label style="font-size:13px;font-weight:600">Status </label>
+          <select class="st" data-oid="${esc(o.id)}">
+            ${CONFIG.STATUSES.map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>`;
+      }).join('')
+    : '<div class="empty"><h3>No orders yet</h3><p>New customer orders will appear here.</p></div>';
+
+  $$('.st').forEach(s => {
+    s.onchange = async () => {
+      const { error } = await sb
+        .from('orders')
+        .update({ status: s.value })
+        .eq('id', s.dataset.oid);
+
+      error
+        ? toast('Update failed: ' + error.message, true)
+        : (toast('Status updated'), ordersTab());
+    };
   });
 }
 
 /* boot */
 document.addEventListener('DOMContentLoaded', () => {
   const pg = document.body.dataset.page;
-  if (pg === 'store') initStore(); else if (pg === 'admin') initAdmin();
-});
+
+  if (pg === 'store') initStore();
+  else if (pg === 'admin') initAdmin();
+});                        }
