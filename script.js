@@ -1,7 +1,7 @@
 /* URBAN THREAD: storefront + admin logic (one file, used by index.html and admin.html) */
 const CONFIG = {
-  SUPABASE_URL: '',        // e.g. https://abcdxyz.supabase.co
-  SUPABASE_ANON_KEY: '',   // the public "anon" key ONLY. Never put the service_role key here.
+  SUPABASE_URL: 'https://afwikvilbmgmwjcwamzx.supabase.co',
+SUPABASE_ANON_KEY: 'sb_publishable_FIpEBKTrSW_j3XhTvNIHHQ_pdX8U3AV',
   WHATSAPP: '',            // digits only with country code, e.g. 923001234567
   CURRENCY: 'Rs',
   EMAIL: '',               // optional, shown on Contact page if filled
