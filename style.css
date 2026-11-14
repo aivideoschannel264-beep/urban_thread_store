@@ -301,3 +301,12 @@ nav.open{
     text-decoration: none !important;
   }
 }
+@media (max-width: 900px) {
+  nav#nav.open {
+    transform: translateY(0) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: flex !important;
+  }
+}
