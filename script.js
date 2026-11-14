@@ -1,11 +1,18 @@
 /* URBAN THREAD: storefront + admin logic (one file, used by index.html and admin.html) */
 const CONFIG = {
+const CONFIG = {
   SUPABASE_URL: 'https://afwikvilbmgmwjcwamzx.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_FIpEBKTrSW_j3XhTvNIHHQ_pdX8U3AV',
   WHATSAPP: '',
   CURRENCY: 'Rs',
   EMAIL: '',
   ADDRESS: '',
+  CATEGORIES: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Hoodies', 'Jackets', 'Traditional Wear'],
+  STATUSES: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
+  BUCKET: 'product-images'
+};  
+  
+  
   CATEGORIES: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Hoodies', 'Jackets', 'Traditional Wear'],
   STATUSES: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
   BUCKET: 'product-images'
